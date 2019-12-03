@@ -29,6 +29,7 @@ class tracker(object):
     randmutex = Lock()  # Prevents races with the numpy random number generator
 
     def shuffle(array, rng):
+        # Shuffle training data
         tracker.randmutex.acquire()
         np.random.set_state(rng)
         np.random.shuffle(array)
@@ -66,6 +67,9 @@ class tracker(object):
         return (satellite_data, offset)
 
     def load_training_data(map):
+        # Loads video and viewpoint training data
+        # The current point in the training dataset is written to disk so that training and resume at the correct point
+        # after the program is modified and restarted
         last_load = util.load("last_load")
         video_data = np.zeros((config.subset_len, 240, 240, 3), dtype="float16")
         metadata = (
@@ -92,7 +96,7 @@ class tracker(object):
         validation_start = config.subset_len - config.validation_len
 
         satellite, offset = tracker.augment_training_data(metadata, map)
-        v_validation = video_data[validation_start : config.subset_len]
+        v_validation = video_data[validation_start : config.subset_len] # Always take the first config.validation_len samples for validation
         sat_validation = satellite[validation_start : config.subset_len]
         offset_validation = offset[validation_start : config.subset_len]
         video = video_data[0:validation_start]
@@ -115,6 +119,7 @@ class tracker(object):
         )
 
     def build_conv_layer(x, filters, strides, kernel_size):
+        # Convenience function for making a convolutional layer
         x = Conv2D(
             filters,
             activation="relu",
@@ -142,6 +147,8 @@ class tracker(object):
         return (satellite_input, video_input, x)
 
     def build_model(scale=0.5):
+        # Creates the convolutional model
+        # Scale multiplies the number of filters in each layer to rapidly assess the best model size
         satellite_input, video_input, conv_out = tracker.build_conv_net(
             scale, (config.image_dimensions[0], config.image_dimensions[1], 6)
         )
@@ -156,6 +163,7 @@ class tracker(object):
         return model
 
     def show_training_data(video_data, satellite_data, offset):
+        # Display training data for sanity checking
         for x in range(0, len(video_data), 1):
             cv2.imshow("vid", util.unnormalize_image(video_data[x]))
             cv2.imshow("sat", util.unnormalize_image(satellite_data[x]))
@@ -164,6 +172,8 @@ class tracker(object):
         cv2.destroyAllWindows()
 
     def train():
+        # Train the model
+        # Data is streamed off the disk while the model trains and the data is reaugmented every epoch
         model = None
         if os.path.isfile(
             "./" + config.model_name + ".model"
@@ -196,9 +206,9 @@ class tracker(object):
                     metadata,
                 ) = future_data.result()
                 future_data = executor.submit(tracker.load_training_data, map)
-                future_augment = executor.submit(
+                future_augment = executor.submit(  # Augment the training data in a background thread
                     tracker.augment_training_data, metadata, map
-                )  # Augment the training data in a background thread
+                )
                 last = 2
                 for k in range(0, last):
                     model.fit(

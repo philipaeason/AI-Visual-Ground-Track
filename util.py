@@ -35,6 +35,7 @@ def rotate_image(image, angle):
 
 
 def normalize_image(input_image):
+    # Normalize an 8-bit image to -1 to 1 float color values
     return (input_image / 127.5) - 1
 
 
@@ -51,8 +52,8 @@ def rotate_vec(yx, degrees):
     return np.array((float(m.T[1]), float(m.T[0])))
 
 
-# test for approximate equality
 def array_almost_equal(myarr, list_arrays):
+    # test for approximate equality
     return next(
         (
             True

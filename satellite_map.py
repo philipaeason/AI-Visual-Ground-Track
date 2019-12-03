@@ -4,11 +4,12 @@ import numpy as np
 import util
 
 map_dimensions = None
-map_corners = [[34.80, -86.71], [34.66, -86.52]]
+map_corners = [[34.80, -86.71], [34.66, -86.52]] # Latitude and longitude of the upper left and lower right corner of the map
 map_name = "huntsville_map"
 
 
 def load_map():
+    # Gets the satellite map image
     global map_dimensions
     map = cv2.imread("raw\\" + map_name + ".jpg")
     map_dimensions = (map.shape[1], map.shape[0])
@@ -44,6 +45,8 @@ def lat_lon_to_pixel(lalon):
 
 
 def map_images(pixel, map, size):
+    # Returns a square portion of the map with side length 2*size centered on pixel
+    # Size is in meters
     opix = lat_lon_to_pixel(util.offset_lat_lon(pixel_to_lat_lon(pixel), (size, size)))
     d = abs(pixel - opix)
     y = map[

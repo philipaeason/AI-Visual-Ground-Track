@@ -13,6 +13,8 @@ import util
 
 
 class viewpoint:
+    """Class for holding one point in a Google Earth tour"""
+
     def __init__(self, lat, lon, alt, head, i=0):
         self.head = head
         self.lat_lon = np.array([lat, lon])
@@ -25,16 +27,14 @@ class tour:
     def __init__(self,):
         self.alt = 200
         self.speed = 80
+        self.heading = 0
         self.step = 3
-        self.interp_points = 14
+        self.interp_points = 14 # The number of interpolated points to add for every step
         self.tour_len = 101
         self.tour_time = (self.tour_len - 1) * self.step
-        self.upper_left = [34.756, -86.666]
-        self.lower_right = [34.712, -86.572]
-        self.upper_left_turn_back = [34.750, -86.6566]
+        self.upper_left_turn_back = [34.750, -86.6566] # Defines the boundary at which the tour will turn around to stay in the training area
         self.lower_right_turn_back = [34.719, -86.562]
         self.viewpoints = []
-        self.heading = 0
 
     def make_tour(self):
         # Create viewpoints that can be used for a Google Earth Tour to generate video with.
@@ -51,7 +51,7 @@ class tour:
                 self.upper_left_turn_back[1], self.lower_right_turn_back[1], 0.5
             ),
         ]
-        pos = [
+        pos = [ # Pick a random starting position
             util.interpolate(
                 self.upper_left_turn_back[0],
                 self.lower_right_turn_back[0],
@@ -67,6 +67,8 @@ class tour:
         for i in range(0, self.tour_len):
             heading += random.uniform(-5, 5)
             turn_back = 0
+
+            # Check if the tour is still in bounds
             if not (
                 self.upper_left_turn_back[0] > pos[0] > self.lower_right_turn_back[0]
             ):
@@ -80,8 +82,8 @@ class tour:
                 head = Geodesic.WGS84.Inverse(pos[0], pos[1], center[0], center[1]).get(
                     "azi1"
                 )
-                a = util.angle_between(head, heading)
-                if a > 0:
+                angle = util.angle_between(head, heading)
+                if angle > 0:
                     heading += 10
                 else:
                     heading -= 10
@@ -104,8 +106,8 @@ class tour:
             next_viewpoint = self.viewpoints[base + 1]
             for i in range(0, self.interp_points):
                 alpha = (i + 1) / (self.interp_points + 1)
-                a = util.angle_between(next_viewpoint.head, base_viewpoint.head)
-                c = viewpoint(
+                angle = util.angle_between(next_viewpoint.head, base_viewpoint.head)
+                interpolated_viewpoint = viewpoint(
                     util.interpolate(
                         base_viewpoint.lat_lon[0], next_viewpoint.lat_lon[0], alpha
                     ),
@@ -113,10 +115,10 @@ class tour:
                         base_viewpoint.lat_lon[1], next_viewpoint.lat_lon[1], alpha
                     ),
                     util.interpolate(base_viewpoint.alt, next_viewpoint.alt, alpha),
-                    base_viewpoint.head + a * alpha,
+                    base_viewpoint.head + angle * alpha,
                     1,
                 )
-                self.viewpoints.insert(base + 1 + i, c)
+                self.viewpoints.insert(base + 1 + i, interpolated_viewpoint)
         util.save("raw\\" + str(tour_id) + "_tour", self)
         util.save("tour_id", tour_id)
 
@@ -148,18 +150,18 @@ class tour:
 		                <gx:flyToMode>smooth</gx:flyToMode>
                 <Camera>
                     <longitude>"""
-                + str(c.lat_lon[1])
-                + """</longitude>
+               + str(c.lat_lon[1])
+               + """</longitude>
                     <latitude>"""
-                + str(c.lat_lon[0])
-                + """</latitude>
+               + str(c.lat_lon[0])
+               + """</latitude>
                     <altitude>"""
-                + str(200)
-                + """</altitude>     
+               + str(200)
+               + """</altitude>     
                     <altitudeMode>relativeToGround</altitudeMode>
-		                    <heading>"""
-                + str(0)
-                + """</heading>        
+	                <heading>"""
+               + str(0)
+               + """</heading>        
                     <tilt>0</tilt>
                     <roll>0</roll>
                 </Camera>

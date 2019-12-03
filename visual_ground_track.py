@@ -11,6 +11,7 @@ import util
 
 
 def main():
+    # Runs the appropriate component of the program
     command = "train"
     if len(sys.argv) == 2:
         command = sys.argv[1]
